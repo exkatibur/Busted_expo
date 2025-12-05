@@ -1,24 +1,41 @@
 import React, { useState } from 'react';
-import { View, Text, Image, ScrollView } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { useUser } from '@/hooks/useUser';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [hasUsername, setHasUsername] = useState(false); // In real app: check AsyncStorage
+  const { username, isInitialized, isLoading, setUsername } = useUser();
+  const [usernameInput, setUsernameInput] = useState('');
 
-  const handleSaveUsername = () => {
-    if (username.trim().length >= 3) {
-      // In real app: save to AsyncStorage
-      setHasUsername(true);
+  const handleSaveUsername = async () => {
+    if (usernameInput.trim().length >= 3) {
+      try {
+        await setUsername(usernameInput);
+      } catch (error) {
+        console.error('Failed to save username:', error);
+      }
     }
   };
 
-  if (!hasUsername) {
+  // Loading State während User initialisiert wird
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#FF6B35" />
+          <Text className="text-text-muted mt-4">Lädt...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Username-Auswahl Screen
+  if (!isInitialized) {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <ScrollView
@@ -41,8 +58,8 @@ export default function HomeScreen() {
             </Text>
             <Input
               placeholder="z.B. FireStarter"
-              value={username}
-              onChangeText={setUsername}
+              value={usernameInput}
+              onChangeText={setUsernameInput}
               maxLength={20}
               autoFocus
               className="mb-4"
@@ -53,7 +70,7 @@ export default function HomeScreen() {
             <Button
               title="Los geht's!"
               onPress={handleSaveUsername}
-              disabled={username.trim().length < 3}
+              disabled={usernameInput.trim().length < 3}
               fullWidth
             />
           </Card>
@@ -66,6 +83,8 @@ export default function HomeScreen() {
     );
   }
 
+  // Haupt-Screen mit Willkommensnachricht
+
   return (
     <SafeAreaView className="flex-1 bg-background">
       <View className="flex-1 justify-center px-6">
@@ -75,7 +94,7 @@ export default function HomeScreen() {
           </View>
           <Text className="text-text text-5xl font-bold mb-3">BUSTED!</Text>
           <Text className="text-text-muted text-lg text-center">
-            Hey {username}! Bereit zum Spielen?
+            Willkommen zurück, {username}! Bereit zum Spielen?
           </Text>
         </View>
 
