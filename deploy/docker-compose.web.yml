@@ -1,0 +1,28 @@
+version: '3.8'
+
+# Optional: Docker deployment for BUSTED! web app
+# This is an alternative to deploying static files directly
+
+services:
+  busted-web:
+    image: caddy:alpine
+    container_name: busted-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./dist:/var/www/busted.exkatibur.de:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

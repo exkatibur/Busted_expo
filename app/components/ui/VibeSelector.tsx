@@ -19,13 +19,12 @@ export function VibeSelector({ vibes, selectedVibe, onSelect }: VibeSelectorProp
         return (
           <Pressable
             key={vibe.id}
-            onPress={() => !isLocked && onSelect(vibe.id)}
-            disabled={isLocked}
+            onPress={() => onSelect(vibe.id)}
             className={`flex-1 min-w-[45%] p-4 rounded-2xl border-2 ${
               isSelected ? 'border-primary bg-surface' : 'border-surface bg-background'
-            } ${isLocked ? 'opacity-50' : ''}`}
+            }`}
             style={({ pressed }) => ({
-              opacity: pressed ? 0.7 : isLocked ? 0.5 : 1,
+              opacity: pressed ? 0.7 : 1,
             })}
           >
             <View className="items-center">
