@@ -9,25 +9,31 @@ interface PlayerCardProps {
   onPress?: () => void;
   selected?: boolean;
   showVoteCount?: number;
+  isCurrentUser?: boolean;
 }
 
-export function PlayerCard({ player, onPress, selected, showVoteCount }: PlayerCardProps) {
+export function PlayerCard({ player, onPress, selected, showVoteCount, isCurrentUser }: PlayerCardProps) {
   const content = (
     <View className="flex-row items-center justify-between">
       <View className="flex-row items-center flex-1">
         <View
           className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${
-            selected ? 'bg-primary' : 'bg-background'
+            selected ? 'bg-primary' : isCurrentUser ? 'bg-success' : 'bg-background'
           }`}
         >
           <MaterialCommunityIcons
             name="account"
             size={24}
-            color={selected ? '#0D0D0D' : '#FF6B35'}
+            color={selected ? '#0D0D0D' : isCurrentUser ? '#FFFFFF' : '#FF6B35'}
           />
         </View>
         <View className="flex-1">
-          <Text className="text-text text-lg font-semibold">{player.username}</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="text-text text-lg font-semibold">{player.username}</Text>
+            {isCurrentUser && (
+              <Text className="text-success text-sm">(Du)</Text>
+            )}
+          </View>
           {player.isHost && (
             <Text className="text-text-muted text-sm">Host</Text>
           )}

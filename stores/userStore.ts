@@ -41,7 +41,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   userId: null,
   username: null,
   isInitialized: false,
-  isLoading: true,
+  isLoading: false, // Start false - will be set true when init starts
 
   /**
    * Setzt den Username und speichert ihn persistent

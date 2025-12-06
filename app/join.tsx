@@ -6,9 +6,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { joinRoom } from '@/services/roomService';
+import { useUser } from '@/hooks/useUser';
+import { useGameStore } from '@/stores/gameStore';
 
 export default function JoinScreen() {
   const router = useRouter();
+  const { userId, username } = useUser();
+  const { setRoom, setUser } = useGameStore();
+
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,15 +27,41 @@ export default function JoinScreen() {
       return;
     }
 
+    if (!userId || !username) {
+      setError('User nicht initialisiert');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      // In real app: check if room exists
+    try {
+      // Join room via API
+      const room = await joinRoom(cleanCode, userId, username);
+
+      // Set room and user in game store
+      setRoom(room);
+      setUser(userId, username, false);
+
+      // Navigate to room
       router.push(`/room/${cleanCode}`);
-    }, 1000);
+    } catch (err) {
+      console.error('Failed to join room:', err);
+
+      if (err instanceof Error) {
+        if (err.message.includes('not found')) {
+          setError('Raum nicht gefunden. Prüfe den Code.');
+        } else if (err.message.includes('already ended')) {
+          setError('Dieses Spiel ist bereits beendet.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Fehler beim Beitreten. Versuche es erneut.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

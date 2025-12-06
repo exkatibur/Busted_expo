@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,12 @@ export default function HomeScreen() {
   const router = useRouter();
   const { username, isInitialized, isLoading, setUsername } = useUser();
   const [usernameInput, setUsernameInput] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  // Track client-side mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSaveUsername = async () => {
     if (usernameInput.trim().length >= 3) {
@@ -22,8 +28,8 @@ export default function HomeScreen() {
     }
   };
 
-  // Loading State während User initialisiert wird
-  if (isLoading) {
+  // Show loading until mounted on client and user check is done
+  if (!mounted || isLoading) {
     return (
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 justify-center items-center">

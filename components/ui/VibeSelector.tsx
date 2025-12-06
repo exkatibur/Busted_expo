@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import type { VibeOption } from '@/types';
+import type { VibeOption, Vibe } from '@/types';
 
 interface VibeSelectorProps {
   vibes: VibeOption[];
-  selectedVibe: string;
-  onSelect: (vibeId: string) => void;
+  selectedVibe: Vibe;
+  onSelect: (vibeId: Vibe) => void;
 }
 
 export function VibeSelector({ vibes, selectedVibe, onSelect }: VibeSelectorProps) {

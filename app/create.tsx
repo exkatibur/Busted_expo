@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -7,14 +7,50 @@ import * as Clipboard from 'expo-clipboard';
 import { triggerHaptic } from '@/lib/haptics';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { DUMMY_ROOM_CODE } from '@/constants/dummyData';
+import { createRoom } from '@/services/roomService';
+import { useUser } from '@/hooks/useUser';
+import { useGameStore } from '@/stores/gameStore';
 
 export default function CreateScreen() {
   const router = useRouter();
-  const [roomCode] = useState(DUMMY_ROOM_CODE); // In real app: generate via API
+  const { userId, username } = useUser();
+  const { setRoom, setUser } = useGameStore();
+
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [roomId, setRoomId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Create room on mount
+  useEffect(() => {
+    async function createNewRoom() {
+      try {
+        if (!userId || !username) {
+          throw new Error('User not initialized');
+        }
+
+        const result = await createRoom(userId, username);
+        setRoomCode(result.code);
+        setRoomId(result.roomId);
+
+        // Set user in game store
+        setUser(userId, username, true);
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to create room:', err);
+        setError(err instanceof Error ? err.message : 'Failed to create room');
+        setLoading(false);
+      }
+    }
+
+    createNewRoom();
+  }, [userId, username]);
 
   const handleCopyCode = async () => {
+    if (!roomCode) return;
+
     await Clipboard.setStringAsync(roomCode);
     triggerHaptic('success');
     setCopied(true);
@@ -22,9 +58,36 @@ export default function CreateScreen() {
   };
 
   const handleContinue = () => {
-    // In real app: create room in DB first
+    if (!roomCode) return;
     router.push(`/room/${roomCode}`);
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#FF6B35" />
+          <Text className="text-text-muted mt-4">Erstelle Raum...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !roomCode) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-1 px-6 py-8">
+          <Card>
+            <Text className="text-error text-lg font-semibold mb-2">Fehler</Text>
+            <Text className="text-text-muted mb-4">
+              {error || 'Raum konnte nicht erstellt werden'}
+            </Text>
+            <Button title="Zurück" onPress={() => router.back()} />
+          </Card>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">

@@ -1,3 +1,5 @@
+import type { VibeOption } from '@/types';
+
 export const DUMMY_PLAYERS = [
   { id: '1', username: 'FireStarter', isHost: true, joinedAt: new Date().toISOString() },
   { id: '2', username: 'CoolCat', isHost: false, joinedAt: new Date().toISOString() },
@@ -31,7 +33,7 @@ export const DUMMY_QUESTIONS = {
   ],
 };
 
-export const VIBES = [
+export const VIBES: VibeOption[] = [
   { id: 'party', name: 'Party', icon: '🎉', color: '#FF6B35' },
   { id: 'date_night', name: 'Date Night', icon: '💕', color: '#F72C25' },
   { id: 'family', name: 'Family', icon: '👨‍👩‍👧‍👦', color: '#10B981' },

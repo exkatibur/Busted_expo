@@ -16,9 +16,8 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="create" />
         <Stack.Screen name="join" />
-        <Stack.Screen name="room/[code]/index" />
-        <Stack.Screen name="room/[code]/game" />
-        <Stack.Screen name="room/[code]/results" />
+        {/* Room screens handled by nested layout in room/[code]/_layout.tsx */}
+        <Stack.Screen name="room/[code]" />
       </Stack>
     </>
   );
