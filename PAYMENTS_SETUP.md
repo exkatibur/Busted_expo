@@ -1,351 +1,276 @@
-# Payments Setup Guide - Busted
+# Payments Setup Guide - Exkatibur Apps
 
-Complete guide to setting up Stripe (Web) and RevenueCat (Mobile) payments for Busted.
+Complete guide to setting up Stripe (Web) and RevenueCat (Mobile) payments for all Exkatibur apps.
 
 ## Overview
 
+**Ein Stripe/RevenueCat Account für alle Apps!**
+
+```
+Stripe Account (Exkatibur)
+├── Produkte für Busted
+│   ├── Party Pass (€1,99)
+│   └── Premium Monat (€2,99)
+├── Produkte für TidySnap (später)
+│   └── ...
+└── Produkte für weitere Apps...
+```
+
 | Platform | Provider | Purpose |
 |----------|----------|---------|
-| Web | Stripe | Credit purchases via checkout |
-| iOS | RevenueCat -> Apple IAP | In-app purchases |
-| Android | RevenueCat -> Google Play | In-app purchases |
+| Web | Stripe | Subscriptions via Checkout |
+| iOS | RevenueCat -> Apple IAP | In-App Purchases |
+| Android | RevenueCat -> Google Play | In-App Purchases |
 
-All payments add credits to the global `credits` table in Supabase.
+Alle Zahlungen werden in einer zentralen Supabase-Datenbank gespeichert, mit `app`-Spalte zur Unterscheidung.
 
 ---
 
 ## Prerequisites
 
-1. Supabase project (already set up)
-2. Stripe account
-3. RevenueCat account
-4. Apple Developer Account (for iOS)
-5. Google Play Developer Account (for Android)
+1. Supabase project (bereits eingerichtet)
+2. **Ein** Stripe Account (für alle Apps)
+3. **Ein** RevenueCat Account (für alle Apps)
+4. Apple Developer Account (für iOS)
+5. Google Play Developer Account (für Android)
 
 ---
 
-## Part 1: Database Setup
-
-### 1. Run Migration
-
-```bash
-cd Apps/Busted
-
-# Push migration to Supabase
-supabase db push
-```
-
-This creates:
-- `profiles` - Global user profiles
-- `credits` - Credits per user per app
-- `transactions` - Payment history
-- `app_access` - App usage tracking
-
-### 2. Verify Tables
-
-Login to Supabase Dashboard -> Table Editor
-
-Check that these tables exist:
-- ✅ `public.profiles`
-- ✅ `public.credits`
-- ✅ `public.transactions`
-- ✅ `public.app_access`
-
----
-
-## Part 2: Stripe Setup (Web)
+## Part 1: Stripe Account Setup (Einmalig)
 
 ### 1. Create Stripe Account
 
 1. Go to https://stripe.com
-2. Sign up / Login
-3. Create a new account for "Busted"
+2. Sign up with your Exkatibur business email
+3. Account name: **"Exkatibur"** (nicht pro App!)
 
 ### 2. Get API Keys
 
 1. Dashboard -> Developers -> API Keys
 2. Copy:
-   - **Publishable key** (starts with `pk_test_...`)
-   - **Secret key** (starts with `sk_test_...`)
+   - **Publishable key** (starts with `pk_test_...` / `pk_live_...`)
+   - **Secret key** (starts with `sk_test_...` / `sk_live_...`)
 
-### 3. Create Products
-
-1. Dashboard -> Products -> Add Product
-
-**Product 1: 100 Credits**
-- Name: `100 Credits`
-- Price: `€4.99`
-- Type: `One-time payment`
-- Metadata:
-  - `credits`: `100`
-  - `app`: `busted`
-
-**Product 2: 500 Credits**
-- Name: `500 Credits`
-- Price: `€19.99`
-- Type: `One-time payment`
-- Metadata:
-  - `credits`: `500`
-  - `app`: `busted`
-
-**Product 3: 1000 Credits**
-- Name: `1000 Credits`
-- Price: `€34.99`
-- Type: `One-time payment`
-- Metadata:
-  - `credits`: `1000`
-  - `app`: `busted`
-
-Copy each **Price ID** (starts with `price_...`)
-
-### 4. Configure Environment Variables
-
-Edit `app/.env`:
-
-```bash
-EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-
-EXPO_PUBLIC_STRIPE_PRICE_100=price_...
-EXPO_PUBLIC_STRIPE_PRICE_500=price_...
-EXPO_PUBLIC_STRIPE_PRICE_1000=price_...
-```
-
-### 5. Deploy Edge Functions
-
-```bash
-# Deploy Stripe checkout function
-supabase functions deploy stripe-checkout
-
-# Deploy Stripe webhook function
-supabase functions deploy stripe-webhook
-
-# Deploy Stripe verify function
-supabase functions deploy stripe-verify
-```
-
-### 6. Set Edge Function Secrets
-
-```bash
-# Set Stripe secret key
-supabase secrets set STRIPE_SECRET_KEY=sk_test_...
-
-# Set webhook secret (see step 7)
-supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
-```
-
-### 7. Configure Webhook
-
-1. Stripe Dashboard -> Developers -> Webhooks
-2. Add endpoint
-3. URL: `https://[your-project-ref].supabase.co/functions/v1/stripe-webhook`
-4. Events to send:
-   - `checkout.session.completed`
-5. Copy **Signing secret** (starts with `whsec_...`)
-6. Update secret:
-
-```bash
-supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
-```
-
-### 8. Test Stripe
-
-1. Start app: `npm run web`
-2. Go to `/pricing`
-3. Click "Buy Now"
-4. Use test card: `4242 4242 4242 4242`
-5. Check credits updated in Supabase
+**Diese Keys gelten für ALLE Apps!**
 
 ---
 
-## Part 3: RevenueCat Setup (Mobile)
+## Part 2: Stripe Products für Busted
+
+### 1. Create Products
+
+Dashboard -> Products -> Add Product
+
+**WICHTIG:** Verwende Metadata `app: busted` um Produkte zuzuordnen!
+
+**Product 1: Party Pass**
+- Name: `Busted Party Pass`
+- Price: `€1,99` (One-time)
+- Metadata:
+  - `app`: `busted`
+  - `plan`: `party_pass`
+  - `duration`: `24h`
+
+**Product 2: Premium**
+- Name: `Busted Premium`
+- Price: `€2,99` (Recurring monthly)
+- Metadata:
+  - `app`: `busted`
+  - `plan`: `premium`
+  - `duration`: `month`
+
+### 2. Copy Price IDs
+
+Nach dem Erstellen, kopiere die **Price IDs** (starts with `price_...`):
+- Party Pass: `price_xxx...`
+- Premium: `price_yyy...`
+
+### 3. Configure Environment Variables
+
+Edit `Apps/Busted/app/.env`:
+
+```bash
+# Stripe (same keys for all apps)
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Busted-specific Price IDs
+EXPO_PUBLIC_STRIPE_PARTY_PASS_PRICE=price_xxx...
+EXPO_PUBLIC_STRIPE_PREMIUM_PRICE=price_yyy...
+```
+
+---
+
+## Part 3: Database Setup
+
+### 1. Run Migrations
+
+Die Migrationen erstellen eine **zentrale** Payment-Struktur:
+
+```bash
+cd Apps/Busted
+
+# Falls noch nicht geschehen
+# Migration 010 & 011 in Supabase SQL Editor ausführen
+```
+
+### 2. Tabellen-Struktur
+
+```sql
+-- Zentrale Subscription-Tabelle (für alle Apps)
+busted_subscriptions (
+  id UUID,
+  user_id TEXT,
+  plan TEXT,           -- 'party_pass' oder 'premium'
+  status TEXT,         -- 'active', 'expired', 'cancelled'
+  expires_at TIMESTAMP,
+  provider TEXT,       -- 'stripe' oder 'revenuecat'
+  provider_id TEXT,    -- Stripe Session ID oder RevenueCat Transaction ID
+  app TEXT DEFAULT 'busted',  -- App-Identifier
+  created_at TIMESTAMP
+)
+```
+
+---
+
+## Part 4: Edge Functions
+
+### 1. Deploy Functions
+
+```bash
+# Supabase CLI installieren (falls noch nicht)
+npm install -g supabase
+
+# Login
+supabase login
+
+# Link to project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Deploy all payment functions
+supabase functions deploy stripe-checkout
+supabase functions deploy stripe-webhook
+supabase functions deploy stripe-verify
+supabase functions deploy revenuecat-webhook
+```
+
+### 2. Set Secrets
+
+```bash
+# Stripe Secret Key (same for all apps)
+supabase secrets set STRIPE_SECRET_KEY=sk_test_...
+
+# Webhook Secret (from Stripe Dashboard)
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+
+# RevenueCat Webhook Secret
+supabase secrets set REVENUECAT_WEBHOOK_SECRET=your_secret_token
+```
+
+### 3. Configure Stripe Webhook
+
+1. Stripe Dashboard -> Developers -> Webhooks
+2. Add endpoint:
+   - URL: `https://[project-ref].supabase.co/functions/v1/stripe-webhook`
+   - Events: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`
+3. Copy **Signing secret** -> update `STRIPE_WEBHOOK_SECRET`
+
+**Ein Webhook für alle Apps!** Die Edge Function unterscheidet anhand der Metadata.
+
+---
+
+## Part 5: RevenueCat Setup (Mobile)
 
 ### 1. Create RevenueCat Account
 
 1. Go to https://www.revenuecat.com
-2. Sign up / Login
-3. Create new project: "Busted"
+2. Sign up with Exkatibur email
+3. Create project: **"Exkatibur"** (nicht pro App!)
 
-### 2. Connect App Stores
+### 2. Add App: Busted iOS
 
-**For iOS:**
-1. RevenueCat Dashboard -> Apps -> Add App
-2. Select "iOS"
-3. Bundle ID: `com.exkatibur.busted` (or your bundle ID)
-4. Connect to App Store Connect:
-   - Go to App Store Connect
-   - Users and Access -> Keys -> App Store Connect API
-   - Create new key (name: "RevenueCat")
-   - Download key (`.p8` file)
-   - Upload to RevenueCat
+1. Dashboard -> Apps -> Add App
+2. Platform: iOS
+3. Bundle ID: `com.exkatibur.busted`
+4. App Name: `Busted`
 
-**For Android:**
-1. RevenueCat Dashboard -> Apps -> Add App
-2. Select "Android"
-3. Package name: `com.exkatibur.busted`
-4. Connect to Google Play:
-   - Go to Google Play Console
-   - Setup -> API access
-   - Create service account
-   - Download JSON key
-   - Upload to RevenueCat
+### 3. Add App: Busted Android
 
-### 3. Create Products in App Stores
+1. Dashboard -> Apps -> Add App
+2. Platform: Android
+3. Package Name: `com.exkatibur.busted`
+4. App Name: `Busted`
+
+### 4. Create Products in App Stores
 
 **Apple App Store Connect:**
 
-1. App Store Connect -> Your App -> In-App Purchases
-2. Create 3 consumable products:
-
-Product 1:
-- Reference Name: `100 Credits`
-- Product ID: `busted_credits_100`
-- Price: `€4.99`
-
-Product 2:
-- Reference Name: `500 Credits`
-- Product ID: `busted_credits_500`
-- Price: `€19.99`
-
-Product 3:
-- Reference Name: `1000 Credits`
-- Product ID: `busted_credits_1000`
-- Price: `€34.99`
+1. App Store Connect -> Busted -> In-App Purchases
+2. Create:
+   - `busted_party_pass` - Consumable, €1,99
+   - `busted_premium_monthly` - Auto-Renewable Subscription, €2,99/month
 
 **Google Play Console:**
 
-1. Google Play Console -> Your App -> Monetize -> Products -> In-app products
-2. Create 3 products (same IDs as iOS):
+1. Play Console -> Busted -> Monetize -> Products
+2. Create:
+   - `busted_party_pass` - One-time product, €1,99
+   - `busted_premium_monthly` - Subscription, €2,99/month
 
-Product 1:
-- Product ID: `busted_credits_100`
-- Name: `100 Credits`
-- Price: `€4.99`
-
-Product 2:
-- Product ID: `busted_credits_500`
-- Name: `500 Credits`
-- Price: `€19.99`
-
-Product 3:
-- Product ID: `busted_credits_1000`
-- Name: `1000 Credits`
-- Price: `€34.99`
-
-### 4. Configure Products in RevenueCat
+### 5. Link Products in RevenueCat
 
 1. RevenueCat Dashboard -> Products
-2. Add Product for each:
-   - Identifier: `busted_credits_100`, `busted_credits_500`, `busted_credits_1000`
-   - Link to iOS Product ID
-   - Link to Android Product ID
+2. Add products and link to store products
+3. Create Entitlements:
+   - `busted_premium` -> linked to premium products
+   - `busted_party_pass` -> linked to party pass products
 
-3. Create Offering:
-   - Name: "Default"
-   - Add all 3 products
+### 6. Get API Keys
 
-### 5. Get API Keys
+RevenueCat Dashboard -> Project Settings -> API Keys:
+- iOS: `appl_xxx...`
+- Android: `goog_xxx...`
 
-1. RevenueCat Dashboard -> Settings -> API Keys
-2. Copy:
-   - iOS API Key (starts with `appl_...`)
-   - Android API Key (starts with `goog_...`)
+### 7. Configure Environment
 
-### 6. Configure Environment Variables
-
-Edit `app/.env`:
+Edit `Apps/Busted/app/.env`:
 
 ```bash
-EXPO_PUBLIC_REVENUECAT_API_KEY_IOS=appl_...
-EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID=goog_...
-```
-
-### 7. Deploy Webhook
-
-```bash
-# Deploy RevenueCat webhook function
-supabase functions deploy revenuecat-webhook
+# RevenueCat
+EXPO_PUBLIC_REVENUECAT_API_KEY_IOS=appl_xxx...
+EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID=goog_xxx...
 ```
 
 ### 8. Configure RevenueCat Webhook
 
 1. RevenueCat Dashboard -> Integrations -> Webhooks
-2. Add Webhook:
-   - URL: `https://[your-project-ref].supabase.co/functions/v1/revenuecat-webhook`
-   - Authorization Header: Create a secret token
-3. Set webhook secret:
-
-```bash
-supabase secrets set REVENUECAT_WEBHOOK_SECRET=your_secret_token
-```
-
-### 9. Test RevenueCat
-
-**iOS:**
-```bash
-# Install RevenueCat
-npm install react-native-purchases
-
-# Build
-eas build --platform ios --profile development
-
-# Install on device
-# Go to /pricing
-# Test purchase (sandbox mode)
-```
-
-**Android:**
-```bash
-# Build
-eas build --platform android --profile development
-
-# Install on device
-# Go to /pricing
-# Test purchase
-```
+2. Add:
+   - URL: `https://[project-ref].supabase.co/functions/v1/revenuecat-webhook`
+   - Auth Header: `Bearer YOUR_SECRET_TOKEN`
 
 ---
 
-## Part 4: Usage in App
+## Part 6: Adding Another App (z.B. TidySnap)
 
-### Show Credits Balance
+### Stripe Products
 
-```tsx
-import { CreditsDisplay } from '@/components/payments/CreditsDisplay';
+1. Stripe Dashboard -> Products -> Add Product
+2. Name: `TidySnap Pro`
+3. Metadata:
+   - `app`: `tidysnap`  ← Andere App!
+   - `plan`: `pro`
+4. Price ID in TidySnap's `.env` eintragen
 
-<CreditsDisplay userId={user.id} />
-```
+### RevenueCat
 
-### Use Credits for Feature
+1. Add new Apps in RevenueCat (iOS + Android für TidySnap)
+2. Create products with prefix `tidysnap_`
+3. Separate API Keys pro App (normale RevenueCat Struktur)
 
-```tsx
-import { useUseCredits } from '@/hooks/useCredits';
-import { FEATURE_COSTS } from '@/types/payments';
+### Database
 
-const { mutateAsync: useCredits } = useUseCredits();
-
-const unlockPremiumVibe = async () => {
-  try {
-    await useCredits({
-      userId: user.id,
-      amount: FEATURE_COSTS.PREMIUM_VIBE,
-      description: 'Unlocked Premium Vibe'
-    });
-
-    // Feature unlocked!
-  } catch (error) {
-    // Not enough credits
-    router.push('/pricing');
-  }
-};
-```
-
-### Navigate to Pricing
-
-```tsx
-import { router } from 'expo-router';
-
-router.push('/pricing');
-```
+Die `busted_subscriptions` Tabelle hat eine `app` Spalte - für neue Apps entweder:
+- Dieselbe Tabelle nutzen (umbenennen zu `subscriptions`)
+- Oder eigene Tabelle pro App erstellen
 
 ---
 
@@ -354,121 +279,99 @@ router.push('/pricing');
 ### Stripe Test Cards
 
 ```
-Success: 4242 4242 4242 4242
-Decline: 4000 0000 0000 0002
-3D Secure: 4000 0027 6000 3184
+Success:     4242 4242 4242 4242
+Decline:     4000 0000 0000 0002
+3D Secure:   4000 0027 6000 3184
 ```
 
-### RevenueCat Sandbox
+### Test Flow
 
-- iOS: Automatic sandbox mode with test Apple ID
-- Android: Use test account in Google Play Console
-
-### Verify Credits
-
-After purchase, check in Supabase:
-
-```sql
-SELECT * FROM credits WHERE user_id = 'user-id' AND app = 'busted';
-SELECT * FROM transactions WHERE user_id = 'user-id' AND app = 'busted';
-```
+1. Start app: `npx expo start --web`
+2. Go to pricing page
+3. Select plan -> Stripe Checkout opens
+4. Use test card
+5. Redirect to success page
+6. Check `busted_subscriptions` table in Supabase
 
 ---
 
 ## Production Checklist
 
-Before going live:
-
 ### Stripe
-- [ ] Switch to live mode API keys
-- [ ] Update webhook URL to production
-- [ ] Test live payment (small amount)
+- [ ] Switch to **live** API keys (`pk_live_...`, `sk_live_...`)
+- [ ] Update webhook to production endpoint
+- [ ] Create live products (copy from test)
+- [ ] Test with real €1 payment
 - [ ] Set up payout schedule
 
 ### RevenueCat
-- [ ] Submit app for review (iOS)
-- [ ] Publish app (Android)
-- [ ] Test with real purchases
-- [ ] Set up revenue notifications
+- [ ] App approved in App Store / Play Store
+- [ ] Products approved and active
+- [ ] Test sandbox purchases
+- [ ] Test real purchase
 
-### General
-- [ ] Update environment variables to production
-- [ ] Test full flow: purchase -> webhook -> credits added
-- [ ] Set up error monitoring (Sentry)
-- [ ] Test refund flow
+### Environment
+- [ ] Update all `.env` files to production values
+- [ ] Update Supabase secrets
+- [ ] Test full flow end-to-end
 
 ---
 
 ## Troubleshooting
 
-### Stripe Webhook Not Working
+### "Stripe configuration missing"
 
-1. Check webhook secret is correct:
+Check `.env` file has:
 ```bash
-supabase secrets list
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
 ```
 
-2. Check Edge Function logs:
-```bash
-supabase functions logs stripe-webhook
-```
+### Webhook not working
 
-3. Test webhook in Stripe Dashboard -> Webhooks -> Test
+1. Check URL is correct in Stripe Dashboard
+2. Check signing secret matches:
+   ```bash
+   supabase secrets list
+   ```
+3. Check Edge Function logs:
+   ```bash
+   supabase functions logs stripe-webhook
+   ```
 
-### RevenueCat Webhook Not Working
+### Subscription not appearing
 
-1. Check webhook URL is correct
-2. Check authorization header matches secret
-3. Check logs:
-```bash
-supabase functions logs revenuecat-webhook
-```
-
-### Credits Not Added
-
-1. Check transaction was logged:
-```sql
-SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;
-```
-
-2. Check RLS policies allow insert:
-```sql
--- Should return rows
-SELECT * FROM credits WHERE user_id = 'test-user' AND app = 'busted';
-```
-
-3. Check Edge Function has service role key:
-```bash
-# Service role key should be available by default
-supabase secrets list
-```
-
-### Mobile: RevenueCat Not Initializing
-
-1. Check API keys are correct in `.env`
-2. Check bundle ID matches RevenueCat dashboard
-3. Check app is configured in App Store Connect / Play Console
-4. Rebuild app after changing config
+1. Check webhook received (Stripe Dashboard -> Webhooks -> Events)
+2. Check Edge Function logs for errors
+3. Verify metadata contains `app: busted`
 
 ---
 
-## Cost Comparison
+## Cost Summary
 
-For a €10 purchase:
+| Platform | Fee | €10 Purchase → You Get |
+|----------|-----|------------------------|
+| Stripe (Web) | ~3% + €0.25 | ~€9.45 |
+| Apple (iOS) | 15-30% | €7.00 - €8.50 |
+| Google (Android) | 15% | ~€8.50 |
 
-| Platform | Fees | You Get |
-|----------|------|---------|
-| Stripe (Web) | ~€0.60 (6%) | ~€9.40 |
-| Apple (iOS) | ~€3.00 (30%) | ~€7.00 |
-| Google (Android) | ~€1.50 (15%) | ~€8.50 |
-
-**Tip:** Encourage users to buy via web for better value!
+**Tip:** Web-Käufe sind günstiger - ermutige User, über Web zu kaufen!
 
 ---
 
-## Support
+## Quick Reference
 
-For issues:
-- Stripe: https://support.stripe.com
-- RevenueCat: https://community.revenuecat.com
-- Supabase: https://supabase.com/docs
+```bash
+# Deploy functions
+supabase functions deploy stripe-checkout
+supabase functions deploy stripe-webhook
+
+# Set secrets
+supabase secrets set STRIPE_SECRET_KEY=sk_...
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Check logs
+supabase functions logs stripe-webhook --tail
+
+# Test locally
+supabase functions serve stripe-webhook --env-file .env.local
+```

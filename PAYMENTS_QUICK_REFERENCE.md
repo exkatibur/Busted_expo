@@ -1,354 +1,172 @@
-# Payments Quick Reference
+# Payments Quick Reference - Exkatibur
 
-Quick guide for using the payment system in Busted.
+Schnellreferenz für das Payment-System aller Exkatibur Apps.
 
----
+## Architektur
 
-## Show Credits in UI
-
-```tsx
-import { CreditsDisplay } from '@/components/payments';
-
-// Full display with buy button
-<CreditsDisplay userId={user.id} />
-
-// Compact display (badge only)
-<CreditsDisplay userId={user.id} compact showBuyButton={false} />
 ```
-
----
-
-## Check Credits Balance
-
-```tsx
-import { useCredits, useHasCredits } from '@/hooks/useCredits';
-
-// Get balance
-const { data: balance, isLoading } = useCredits(user?.id);
-
-// Check if user has enough credits
-const hasEnoughCredits = useHasCredits(user?.id, 50);
-
-if (!hasEnoughCredits) {
-  router.push('/pricing');
-}
+┌─────────────────────────────────────────────────────────────────┐
+│                    EIN Stripe Account                           │
+│                       "Exkatibur"                               │
+├─────────────────────────────────────────────────────────────────┤
+│  Products:                                                      │
+│  ├── Busted Party Pass    (metadata: app=busted)               │
+│  ├── Busted Premium       (metadata: app=busted)               │
+│  ├── TidySnap Pro         (metadata: app=tidysnap)  [später]   │
+│  └── ...weitere Apps                                            │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    EIN Supabase Project                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Edge Functions:                                                │
+│  ├── stripe-checkout    (erstellt Checkout Session)            │
+│  ├── stripe-webhook     (empfängt Zahlungsbestätigungen)       │
+│  └── stripe-verify      (prüft Session nach Redirect)          │
+├─────────────────────────────────────────────────────────────────┤
+│  Database:                                                      │
+│  └── busted_subscriptions (mit app-Spalte für Multi-App)       │
+└─────────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## Use Credits
-
-```tsx
-import { useUseCredits } from '@/hooks/useCredits';
-import { FEATURE_COSTS } from '@/types/payments';
-
-const { mutateAsync: useCredits, isPending } = useUseCredits();
-
-const unlockFeature = async () => {
-  try {
-    const success = await useCredits({
-      userId: user.id,
-      amount: FEATURE_COSTS.PREMIUM_VIBE,
-      description: 'Unlocked Premium Vibe: Party Hard'
-    });
-
-    if (success) {
-      // Feature unlocked!
-      console.log('Feature unlocked');
-    }
-  } catch (error) {
-    // Not enough credits
-    Alert.alert('Not Enough Credits', 'Buy more credits to unlock this feature');
-    router.push('/pricing');
-  }
-};
-```
-
----
-
-## Navigate to Pricing
-
-```tsx
-import { router } from 'expo-router';
-
-router.push('/pricing');
-```
-
----
-
-## Feature Costs
-
-```tsx
-import { FEATURE_COSTS } from '@/types/payments';
-
-FEATURE_COSTS.PREMIUM_VIBE              // 50 credits
-FEATURE_COSTS.AI_QUESTION_GENERATION    // 10 credits per question
-FEATURE_COSTS.AI_QUESTION_BATCH         // 100 credits (20 questions)
-FEATURE_COSTS.SAVE_CUSTOM_QUESTION      // 5 credits
-FEATURE_COSTS.UNLIMITED_CUSTOM_QUESTIONS // 200 credits (one-time)
-FEATURE_COSTS.AD_FREE_24H               // 20 credits
-FEATURE_COSTS.AD_FREE_7D                // 50 credits
-FEATURE_COSTS.AD_FREE_30D               // 150 credits
-FEATURE_COSTS.AD_FREE_FOREVER           // 500 credits
-```
-
----
-
-## Purchase Flow
-
-```tsx
-import { usePayments } from '@/hooks/usePayments';
-import { CREDIT_PACKAGES } from '@/types/payments';
-
-const { purchaseCredits, paymentState } = usePayments(user?.id);
-
-const handleBuyCredits = async () => {
-  const package = CREDIT_PACKAGES[1]; // 500 credits
-  await purchaseCredits(package);
-
-  // Web: User is redirected to Stripe
-  // Mobile: Purchase dialog opens
-};
-
-// Check payment status
-if (paymentState.status === 'success') {
-  console.log('Purchase successful!');
-}
-```
-
----
-
-## Restore Purchases (Mobile Only)
-
-```tsx
-import { usePayments } from '@/hooks/usePayments';
-
-const { restoreCredits } = usePayments(user?.id);
-
-const handleRestore = async () => {
-  await restoreCredits();
-  Alert.alert('Success', 'Purchases restored');
-};
-```
-
----
-
-## Transaction History
-
-```tsx
-import { useTransactions } from '@/hooks/useCredits';
-
-const { data: transactions, isLoading } = useTransactions(user?.id);
-
-transactions?.map(tx => (
-  <View key={tx.id}>
-    <Text>{tx.description}</Text>
-    <Text>{tx.amount > 0 ? '+' : ''}{tx.amount} credits</Text>
-    <Text>{new Date(tx.created_at).toLocaleDateString()}</Text>
-  </View>
-));
-```
-
----
-
-## Realtime Credits Updates
-
-```tsx
-import { useCreditsSubscription } from '@/hooks/useCredits';
-
-// Subscribe to credits changes
-useCreditsSubscription(user?.id);
-
-// Credits will auto-update when changed (e.g., after purchase)
-```
-
----
-
-## Check Platform & Payment Method
-
-```tsx
-import { usePayments } from '@/hooks/usePayments';
-
-const { availablePaymentMethod } = usePayments(user?.id);
-
-if (availablePaymentMethod === 'stripe') {
-  // Web - Stripe checkout
-}
-
-if (availablePaymentMethod === 'revenuecat') {
-  // Mobile - In-app purchase
-}
-
-if (!availablePaymentMethod) {
-  // Payment not available
-}
-```
-
----
-
-## Example: Premium Question Category
-
-```tsx
-import { useState } from 'react';
-import { useUseCredits, useHasCredits } from '@/hooks/useCredits';
-import { FEATURE_COSTS } from '@/types/payments';
-
-const PremiumVibeCard = ({ vibe, userId }) => {
-  const [unlocked, setUnlocked] = useState(false);
-  const { mutateAsync: useCredits } = useUseCredits();
-  const hasEnoughCredits = useHasCredits(userId, FEATURE_COSTS.PREMIUM_VIBE);
-
-  const handleUnlock = async () => {
-    if (!hasEnoughCredits) {
-      Alert.alert('Not Enough Credits', 'Buy more credits to unlock');
-      router.push('/pricing');
-      return;
-    }
-
-    try {
-      await useCredits({
-        userId,
-        amount: FEATURE_COSTS.PREMIUM_VIBE,
-        description: `Unlocked Premium Vibe: ${vibe.name}`
-      });
-
-      setUnlocked(true);
-      Alert.alert('Unlocked!', `${vibe.name} is now available`);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to unlock. Please try again.');
-    }
-  };
-
-  return (
-    <TouchableOpacity onPress={handleUnlock} disabled={unlocked}>
-      <Text>{vibe.name}</Text>
-      {!unlocked && (
-        <Text>Unlock for {FEATURE_COSTS.PREMIUM_VIBE} credits</Text>
-      )}
-    </TouchableOpacity>
-  );
-};
-```
-
----
-
-## Example: AI Question Generation
-
-```tsx
-import { useUseCredits } from '@/hooks/useCredits';
-import { FEATURE_COSTS } from '@/types/payments';
-
-const GenerateAIQuestions = ({ userId, count = 1 }) => {
-  const { mutateAsync: useCredits } = useUseCredits();
-
-  const generateQuestions = async () => {
-    const cost = count === 1
-      ? FEATURE_COSTS.AI_QUESTION_GENERATION
-      : FEATURE_COSTS.AI_QUESTION_BATCH;
-
-    try {
-      await useCredits({
-        userId,
-        amount: cost,
-        description: `Generated ${count} AI questions`
-      });
-
-      // Call AI API to generate questions
-      const questions = await generateWithAI(count);
-
-      return questions;
-    } catch (error) {
-      router.push('/pricing');
-    }
-  };
-
-  return (
-    <TouchableOpacity onPress={generateQuestions}>
-      <Text>Generate {count} AI Questions</Text>
-      <Text>{cost} credits</Text>
-    </TouchableOpacity>
-  );
-};
-```
-
----
-
-## Database Queries (Backend/Edge Functions only)
-
-```typescript
-// Add credits (webhook)
-await supabase.rpc('add_credits', {
-  p_user_id: userId,
-  p_app: 'busted',
-  p_amount: 500,
-  p_source: 'stripe',
-  p_external_id: 'ch_1234',
-  p_price_cents: 1999,
-  p_description: 'Purchased 500 credits'
-});
-
-// Use credits
-const { data: success } = await supabase.rpc('use_credits', {
-  p_user_id: userId,
-  p_app: 'busted',
-  p_amount: 50,
-  p_description: 'Unlocked Premium Vibe'
-});
-
-// Get balance
-const { data: balance } = await supabase.rpc('get_or_create_credits', {
-  p_user_id: userId,
-  p_app: 'busted'
-});
-```
-
----
 
 ## Environment Variables
 
-```bash
-# Stripe (Web)
-EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-EXPO_PUBLIC_STRIPE_PRICE_100=price_...
-EXPO_PUBLIC_STRIPE_PRICE_500=price_...
-EXPO_PUBLIC_STRIPE_PRICE_1000=price_...
+### Busted App (.env)
 
-# RevenueCat (Mobile)
-EXPO_PUBLIC_REVENUECAT_API_KEY_IOS=appl_...
-EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID=goog_...
+```bash
+# Supabase
+EXPO_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+
+# Stripe (gleiche Keys für alle Apps!)
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# Busted-spezifische Price IDs
+EXPO_PUBLIC_STRIPE_PARTY_PASS_PRICE=price_xxx
+EXPO_PUBLIC_STRIPE_PREMIUM_PRICE=price_yyy
+
+# RevenueCat (pro App unterschiedlich)
+EXPO_PUBLIC_REVENUECAT_API_KEY_IOS=appl_xxx
+EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID=goog_xxx
 ```
 
----
+### Supabase Secrets
 
-## File Structure
+```bash
+STRIPE_SECRET_KEY=sk_test_...        # Gleich für alle Apps
+STRIPE_WEBHOOK_SECRET=whsec_...      # Ein Webhook für alle Apps
+REVENUECAT_WEBHOOK_SECRET=xxx        # Ein Webhook für alle Apps
+```
+
+## Stripe Products Setup
+
+### In Stripe Dashboard erstellen:
+
+| Product | Price | Metadata |
+|---------|-------|----------|
+| Busted Party Pass | €1,99 | `app: busted`, `plan: party_pass`, `duration: 24h` |
+| Busted Premium | €2,99/mo | `app: busted`, `plan: premium`, `duration: month` |
+
+**Wichtig:** Die `app` Metadata wird vom Webhook genutzt, um die richtige Datenbank-Tabelle zu finden!
+
+## Code-Struktur
 
 ```
 app/
-├── types/
-│   └── payments.ts               # Payment types & constants
-├── lib/
-│   └── payments/
-│       ├── stripe.ts             # Stripe integration
-│       └── revenuecat.ts         # RevenueCat integration
+├── types/payments.ts          # APP_NAME = 'busted'
+├── lib/payments/
+│   ├── stripe.ts              # Stripe Web Integration
+│   └── revenuecat.ts          # RevenueCat Mobile
 ├── hooks/
-│   ├── useCredits.ts             # Credits management
-│   └── usePayments.ts            # Purchase flow
-├── components/
-│   └── payments/
-│       ├── CreditsDisplay.tsx    # Credits badge
-│       ├── CreditPackageCard.tsx # Package card
-│       └── index.ts              # Exports
-└── app/
-    ├── pricing.tsx               # Pricing page
-    └── payment/
-        └── success.tsx           # Success page (web)
-
-supabase/
-├── migrations/
-│   └── 010_create_global_payment_tables.sql
-└── functions/
-    ├── stripe-checkout/          # Create checkout session
-    ├── stripe-webhook/           # Handle Stripe webhooks
-    ├── stripe-verify/            # Verify session
-    └── revenuecat-webhook/       # Handle RevenueCat webhooks
+│   ├── usePayments.ts         # Payment Logic
+│   └── usePremium.ts          # Subscription Status
+├── app/pricing.tsx            # Pricing Page
+└── app/payment/success.tsx    # Success Redirect
 ```
+
+## Flow: Web Payment (Stripe)
+
+```
+1. User klickt "Kaufen" auf /pricing
+   │
+2. usePayments.purchasePlan() aufgerufen
+   │
+3. stripe.createCheckoutSession()
+   → POST /functions/v1/stripe-checkout
+   → Returns checkout URL
+   │
+4. Redirect zu Stripe Checkout
+   │
+5. User zahlt
+   │
+6. Stripe sendet Webhook
+   → POST /functions/v1/stripe-webhook
+   → Liest metadata.app ('busted')
+   → INSERT INTO busted_subscriptions
+   │
+7. Redirect zu /payment/success
+   → stripe.verifyCheckoutSession()
+   │
+8. usePremium() zeigt neuen Status
+```
+
+## Commands
+
+```bash
+# Functions deployen
+supabase functions deploy stripe-checkout
+supabase functions deploy stripe-webhook
+supabase functions deploy stripe-verify
+
+# Secrets setzen
+supabase secrets set STRIPE_SECRET_KEY=sk_...
+supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Logs checken
+supabase functions logs stripe-webhook --tail
+
+# Lokal testen
+supabase functions serve --env-file .env.local
+```
+
+## Test Cards
+
+```
+Erfolg:      4242 4242 4242 4242
+Abgelehnt:   4000 0000 0000 0002
+3D Secure:   4000 0027 6000 3184
+```
+
+## Database Queries
+
+```sql
+-- Aktive Subscriptions für User
+SELECT * FROM busted_subscriptions
+WHERE user_id = 'xxx'
+  AND app = 'busted'
+  AND status = 'active'
+  AND expires_at > NOW();
+
+-- Alle Subscriptions (Multi-App)
+SELECT app, plan, COUNT(*)
+FROM busted_subscriptions
+WHERE status = 'active'
+GROUP BY app, plan;
+```
+
+## Neue App hinzufügen
+
+1. **Stripe:** Neue Products mit `app: neueapp` Metadata
+2. **Code:** `APP_NAME = 'neueapp'` in types/payments.ts
+3. **Webhook:** Prüft automatisch die `app` Metadata
+4. **Database:** Nutzt dieselbe Tabelle mit `app`-Filter
+
+## Troubleshooting
+
+| Problem | Lösung |
+|---------|--------|
+| "Stripe not available" | Check `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
+| Webhook 400 Error | Check `STRIPE_WEBHOOK_SECRET` |
+| Subscription nicht gespeichert | Check Metadata hat `app: busted` |
+| RevenueCat nicht initialisiert | Check API Keys + Bundle ID |
