@@ -10,11 +10,15 @@ import { Card } from '@/components/ui/Card';
 import { createRoom } from '@/services/roomService';
 import { useUser } from '@/hooks/useUser';
 import { useGameStore } from '@/stores/gameStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useLanguageStore } from '@/stores/languageStore';
 
 export default function CreateScreen() {
   const router = useRouter();
   const { userId, username } = useUser();
   const { setRoom, setUser } = useGameStore();
+  const { t } = useTranslation();
+  const language = useLanguageStore((s) => s.language);
 
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
@@ -30,7 +34,8 @@ export default function CreateScreen() {
           throw new Error('User not initialized');
         }
 
-        const result = await createRoom(userId, username);
+        // Pass the host's current language to the room
+        const result = await createRoom(userId, username, 'party', language);
         setRoomCode(result.code);
         setRoomId(result.roomId);
 
@@ -46,7 +51,7 @@ export default function CreateScreen() {
     }
 
     createNewRoom();
-  }, [userId, username]);
+  }, [userId, username, language]);
 
   const handleCopyCode = async () => {
     if (!roomCode) return;
@@ -67,7 +72,7 @@ export default function CreateScreen() {
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color="#FF6B35" />
-          <Text className="text-text-muted mt-4">Erstelle Raum...</Text>
+          <Text className="text-text-muted mt-4">{t('creatingRoom')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -78,11 +83,11 @@ export default function CreateScreen() {
       <SafeAreaView className="flex-1 bg-background">
         <View className="flex-1 px-6 py-8">
           <Card>
-            <Text className="text-error text-lg font-semibold mb-2">Fehler</Text>
+            <Text className="text-error text-lg font-semibold mb-2">{t('error')}</Text>
             <Text className="text-text-muted mb-4">
-              {error || 'Raum konnte nicht erstellt werden'}
+              {error || t('couldNotCreateRoom')}
             </Text>
-            <Button title="Zurück" onPress={() => router.back()} />
+            <Button title={t('back')} onPress={() => router.back()} />
           </Card>
         </View>
       </SafeAreaView>
@@ -101,14 +106,14 @@ export default function CreateScreen() {
           </Pressable>
 
           <Text className="text-text text-3xl font-bold mb-3">
-            Raum erstellt! 🎉
+            {t('roomCreated')} 🎉
           </Text>
           <Text className="text-text-muted text-lg mb-12">
-            Teile diesen Code mit deinen Freunden
+            {t('shareCodeWithFriends')}
           </Text>
 
           <Card className="items-center mb-8">
-            <Text className="text-text-muted text-sm mb-4">Raum-Code</Text>
+            <Text className="text-text-muted text-sm mb-4">{t('roomCode')}</Text>
             <Pressable onPress={handleCopyCode}>
               <View className="flex-row items-center gap-4">
                 <Text className="text-primary text-6xl font-bold tracking-widest">
@@ -122,7 +127,7 @@ export default function CreateScreen() {
               </View>
             </Pressable>
             {copied && (
-              <Text className="text-success text-sm mt-4">Code kopiert!</Text>
+              <Text className="text-success text-sm mt-4">{t('codeCopied')}</Text>
             )}
           </Card>
 
@@ -132,10 +137,9 @@ export default function CreateScreen() {
                 <Text className="text-lg">💡</Text>
               </View>
               <View className="flex-1">
-                <Text className="text-text font-semibold mb-2">Tipp</Text>
+                <Text className="text-text font-semibold mb-2">{t('tip')}</Text>
                 <Text className="text-text-muted text-sm">
-                  Deine Freunde können den Code in der App eingeben oder du
-                  teilst einen direkten Link (bald verfügbar)
+                  {t('tipText')}
                 </Text>
               </View>
             </View>
@@ -143,7 +147,7 @@ export default function CreateScreen() {
         </View>
 
         <Button
-          title="Zur Lobby"
+          title={t('toLobby')}
           onPress={handleContinue}
           fullWidth
         />

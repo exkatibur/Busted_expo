@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Room, Vibe, GameStatus } from '../types';
+import { Room, Vibe, GameStatus, Language } from '../types';
 
 /**
  * Room Service
@@ -17,7 +17,8 @@ export interface CreateRoomResult {
 export async function createRoom(
   hostId: string,
   hostUsername: string,
-  vibe: Vibe = 'party'
+  vibe: Vibe = 'party',
+  hostLanguage: Language = 'en'
 ): Promise<CreateRoomResult> {
   try {
     // Generate unique room code via database function
@@ -38,6 +39,7 @@ export async function createRoom(
         vibe,
         status: 'lobby',
         current_round: 1,
+        host_language: hostLanguage,
       })
       .select('id, code')
       .single();
@@ -133,6 +135,7 @@ export async function joinRoom(
       currentQuestionId: room.current_question_id,
       currentRound: room.current_round,
       createdAt: room.created_at,
+      hostLanguage: room.host_language || 'en',
     };
   } catch (error) {
     console.error('Error joining room:', error);
@@ -170,6 +173,7 @@ export async function getRoom(code: string): Promise<Room | null> {
       currentQuestionId: room.current_question_id,
       currentRound: room.current_round,
       createdAt: room.created_at,
+      hostLanguage: room.host_language || 'en',
     };
   } catch (error) {
     console.error('Error getting room:', error);
@@ -206,6 +210,7 @@ export async function getRoomById(roomId: string): Promise<Room | null> {
       currentQuestionId: room.current_question_id,
       currentRound: room.current_round,
       createdAt: room.created_at,
+      hostLanguage: room.host_language || 'en',
     };
   } catch (error) {
     console.error('Error getting room by ID:', error);

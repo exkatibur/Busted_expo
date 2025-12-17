@@ -9,11 +9,13 @@ import { Card } from '@/components/ui/Card';
 import { joinRoom } from '@/services/roomService';
 import { useUser } from '@/hooks/useUser';
 import { useGameStore } from '@/stores/gameStore';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function JoinScreen() {
   const router = useRouter();
   const { userId, username } = useUser();
   const { setRoom, setUser } = useGameStore();
+  const { t } = useTranslation();
 
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -23,12 +25,12 @@ export default function JoinScreen() {
     const cleanCode = code.trim().toUpperCase();
 
     if (cleanCode.length !== 6) {
-      setError('Code muss 6 Zeichen lang sein');
+      setError(t('codeMustBe6Chars'));
       return;
     }
 
     if (!userId || !username) {
-      setError('User nicht initialisiert');
+      setError(t('userNotInitialized'));
       return;
     }
 
@@ -50,14 +52,14 @@ export default function JoinScreen() {
 
       if (err instanceof Error) {
         if (err.message.includes('not found')) {
-          setError('Raum nicht gefunden. Prüfe den Code.');
+          setError(t('roomNotFoundCheckCode'));
         } else if (err.message.includes('already ended')) {
-          setError('Dieses Spiel ist bereits beendet.');
+          setError(t('gameAlreadyEnded'));
         } else {
           setError(err.message);
         }
       } else {
-        setError('Fehler beim Beitreten. Versuche es erneut.');
+        setError(t('errorJoining'));
       }
     } finally {
       setLoading(false);
@@ -75,10 +77,10 @@ export default function JoinScreen() {
         </Pressable>
 
         <Text className="text-text text-3xl font-bold mb-3">
-          Raum beitreten
+          {t('joinRoomTitle')}
         </Text>
         <Text className="text-text-muted text-lg mb-12">
-          Gib den 6-stelligen Code ein
+          {t('enter6DigitCode')}
         </Text>
 
         <Card className="mb-6">
@@ -98,7 +100,7 @@ export default function JoinScreen() {
         </Card>
 
         <Button
-          title="Beitreten"
+          title={t('joinRoom')}
           onPress={handleJoin}
           disabled={code.length !== 6}
           loading={loading}
@@ -111,10 +113,9 @@ export default function JoinScreen() {
               <Text className="text-lg">ℹ️</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-text font-semibold mb-2">Hinweis</Text>
+              <Text className="text-text font-semibold mb-2">{t('hint')}</Text>
               <Text className="text-text-muted text-sm">
-                Der Raum-Code wird dir vom Host (Spielersteller) mitgeteilt.
-                Er besteht aus 6 Buchstaben und Zahlen.
+                {t('hintJoinText')}
               </Text>
             </View>
           </View>

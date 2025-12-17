@@ -7,11 +7,12 @@ import { useUserStore } from '@/stores/userStore';
  * Wrapper um den UserStore mit:
  * - Auto-Initialize beim ersten Mount
  * - Convenience-Funktionen
+ * - Auth-Funktionen für registrierte User
  *
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { username, isInitialized, setUsername } = useUser();
+ *   const { username, isInitialized, isAuthenticated, setUsername } = useUser();
  *
  *   if (!isInitialized) {
  *     return <UsernameScreen onSubmit={setUsername} />;
@@ -38,9 +39,20 @@ export function useUser() {
     isInitialized: store.isInitialized,
     isLoading: store.isLoading,
 
+    // Auth State
+    authUser: store.authUser,
+    session: store.session,
+    isAuthenticated: store.isAuthenticated,
+    email: store.authUser?.email || null,
+
     // Actions
     setUsername: store.setUsername,
     clearUser: store.clearUser,
+
+    // Auth Actions
+    signIn: store.signIn,
+    signUp: store.signUp,
+    signOut: store.signOut,
 
     // Computed
     hasUser: store.userId !== null,

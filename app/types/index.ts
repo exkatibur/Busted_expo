@@ -2,6 +2,8 @@ export type Vibe = 'party' | 'date_night' | 'family' | 'spicy';
 
 export type GameStatus = 'lobby' | 'playing' | 'results' | 'finished';
 
+export type Language = 'en' | 'de';
+
 export interface Player {
   id: string;
   username: string;
@@ -18,6 +20,7 @@ export interface Room {
   currentQuestionId?: string;
   currentRound: number;
   createdAt: string;
+  hostLanguage: Language;
 }
 
 export interface Question {
@@ -25,6 +28,7 @@ export interface Question {
   vibe: Vibe;
   text: string;
   isPremium: boolean;
+  language?: Language;
 }
 
 export interface Vote {

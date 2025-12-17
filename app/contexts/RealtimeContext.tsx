@@ -13,7 +13,7 @@ import { debugLog, debugError } from '@/lib/debug';
  */
 
 export interface GameEvent {
-  type: 'game_start' | 'vote_cast' | 'round_complete' | 'next_round' | 'game_end' | 'player_joined' | 'player_left';
+  type: 'game_start' | 'vote_cast' | 'round_complete' | 'next_round' | 'game_end' | 'player_joined' | 'player_left' | 'question_skipped' | 'reveal_request' | 'reveal_response' | 'reveal_result';
   payload: any;
 }
 
@@ -167,6 +167,10 @@ export function RealtimeProvider({
       'game_end',
       'player_joined',
       'player_left',
+      'question_skipped',
+      'reveal_request',
+      'reveal_response',
+      'reveal_result',
     ];
 
     gameEventTypes.forEach((eventType) => {

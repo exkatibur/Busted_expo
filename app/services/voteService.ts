@@ -291,6 +291,32 @@ export async function getRoundResults(roomId: string, round: number) {
 }
 
 /**
+ * Get voters who voted for a specific player in a round
+ * Returns voter IDs for the reveal feature
+ */
+export async function getVotersForPlayer(
+  roomId: string,
+  round: number,
+  playerId: string
+): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('busted_votes')
+      .select('voter_id')
+      .eq('room_id', roomId)
+      .eq('round', round)
+      .eq('voted_for_id', playerId);
+
+    if (error) throw error;
+
+    return (data || []).map((v) => v.voter_id);
+  } catch (error) {
+    console.error('Error getting voters for player:', error);
+    throw error;
+  }
+}
+
+/**
  * Get all results for a room
  */
 export async function getAllRoundResults(roomId: string) {
